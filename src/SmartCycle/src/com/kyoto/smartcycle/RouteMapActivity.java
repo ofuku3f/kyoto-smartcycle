@@ -33,41 +33,41 @@ import com.google.android.maps.MyLocationOverlay;
 import com.google.android.maps.Overlay;
 import com.google.android.maps.Projection;
 
+/**
+ * @brief 目的地を設定してルート検索を行うActivity
+ */
 public class RouteMapActivity extends MapActivity {
-
-//	private LocationManager mLocMgr = null;
 
 	private MapView mMap = null;
 	private MapController mMapCtrl = null;
 	
 //	private CurrentLocationOverlay currentLocationOverlay;
-	private TrackingMyLocationOverlay mMyLocOverlay = null;
-	private RouteOverlay routeOverlay = null;
-	private CrossOverlay mCrossOverlay = null;
+	private TrackingMyLocationOverlay mMyLocOverlay = null; // 現在地表示用オーバーレイ
+	private RouteOverlay mRouteOverlay = null; // ルート表示用オーバーレイ
+	private CrossOverlay mCrossOverlay = null; // 十字表示用オーバーレイ
 	
 	private Context mContext = null;
 	
-	private GeoPoint startingPoint = null;
+	private GeoPoint mStartingPoint = null; // 出発地点(mCurPointに集約できるかも)
+	private GeoPoint mCurPoint = null; // 現在地点
+	public GeoPoint getCurPoint(){
+		return mCurPoint;
+	}
 	
-	private RouteModel mRoute = null;
+	private RouteModel mRoute = null; // ルート情報
 	public RouteModel getRoute() {
 		return mRoute;
 	}
 
-	private GeoPoint mCurPoint = null;
-	public GeoPoint getCurPoint(){
-		return mCurPoint;
-	}
-
-	private static final String LOG_TAG = "RouteMapActivity";
-	private static final String ROUTE_URL = "http://maps.googleapis.com/maps/api/directions/json?origin=%s&destination=%s&sensor=false"; 
+	private static final String LOG_TAG = "RouteMapActivity"; // LOGCAT用TAG
+	private static final String ROUTE_URL = "http://maps.googleapis.com/maps/api/directions/json?origin=%s&destination=%s&avoid=tolls&avoid=highways&sensor=false"; // Google Directions APIのURL 
+	
 	private static final int MENU_ID_SET_DESTINATION = (Menu.FIRST + 1); 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.routemap);
-		
 		mContext = this;
 		
 		// MapView の設定
@@ -80,21 +80,24 @@ public class RouteMapActivity extends MapActivity {
 		// 現在地表示のオーバーレイを生成
 		mMyLocOverlay = new TrackingMyLocationOverlay(this, mMap);
 		mMyLocOverlay.runOnFirstFix(new Runnable() {
-			
 			@Override
 			public void run() {
-				
+				// 現在地に画面中心を合わせる。
 				mMapCtrl.animateTo(mMyLocOverlay.getMyLocation());
-				startingPoint = mMyLocOverlay.getMyLocation();
-				Log.d(LOG_TAG, "Fix Current Location: " + startingPoint.getLatitudeE6() + "," + startingPoint.getLongitudeE6());
+				mStartingPoint = mMyLocOverlay.getMyLocation();
+				Log.d(LOG_TAG, "Fix Current Location: " + mStartingPoint.getLatitudeE6() + "," + mStartingPoint.getLongitudeE6());
 			}
 		});
-		
 		mMap.getOverlays().add(mMyLocOverlay);
 
-		// 中心ラインを表示
+		// 中心の十字ラインを表示
 		mCrossOverlay = new CrossOverlay();
 		mMap.getOverlays().add(mCrossOverlay);
+		
+		//TODO: 前回のルート情報の有無を確認して残っていれば再現し
+		//      ルート表示オーバーレイを登録する。
+		mRouteOverlay = new RouteOverlay();
+		mMap.getOverlays().add(mRouteOverlay);
 		
 	}
 	
@@ -102,27 +105,23 @@ public class RouteMapActivity extends MapActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-//       	mLocMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, currentLocationListener);
 		
 		// 現在地取得の有効化
 		if(mMyLocOverlay != null && !mMyLocOverlay.isMyLocationEnabled()){
 			mMyLocOverlay.enableMyLocation();
 			mMyLocOverlay.enableCompass();
-		}
-		
-
+		}		
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-//		mLocMgr.removeUpdates(currentLocationListener);
 		
 		// 現在地取得の無効化
-//		if(mMyLocOverlay != null && mMyLocOverlay.isMyLocationEnabled()){
-//			mMyLocOverlay.disableMyLocation();
-//			mMyLocOverlay.disableCompass();	
-//		}
+		if(mMyLocOverlay != null && mMyLocOverlay.isMyLocationEnabled()){
+			mMyLocOverlay.disableMyLocation();
+			mMyLocOverlay.disableCompass();	
+		}
 	}
 	
 	@Override
@@ -133,7 +132,7 @@ public class RouteMapActivity extends MapActivity {
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		menu.add(Menu.NONE, MENU_ID_SET_DESTINATION, Menu.NONE, getResources().getString(R.string.MENU_SET_DESTINATION));
+		menu.add(Menu.NONE, MENU_ID_SET_DESTINATION, Menu.NONE, getResources().getString(R.string.MENU_SET_DESTINATION)); // 目的地設定メニュー
 		return super.onCreateOptionsMenu(menu);
 	}
 
@@ -147,10 +146,9 @@ public class RouteMapActivity extends MapActivity {
     			// Google Directions API へのリクエストを，非同期で実行する。
     			FetchRouteDataTask task = new FetchRouteDataTask();
     			task.execute(String.format(ROUTE_URL, 
-    					String.format("%f,%f", startingPoint.getLatitudeE6() * 0.000001, startingPoint.getLongitudeE6() * 0.000001),
-    					String.format("%f,%f", dest.getLatitudeE6() * 0.000001, dest.getLongitudeE6() * 0.000001))
+    					String.format("%f,%f", mCurPoint.getLatitudeE6() * 1.0E-6, mCurPoint.getLongitudeE6() * 1.0E-6),
+    					String.format("%f,%f", dest.getLatitudeE6() * 1.0E-6, dest.getLongitudeE6() * 1.0E-6))
     					);
-				
 				break;
 		}
 		
@@ -158,10 +156,10 @@ public class RouteMapActivity extends MapActivity {
 	}
 
 	
-    // サーバへのデータ登録リクエストを投げる、非同期タスク
+    // Google Derections APIを投げる、非同期タスク
     private class FetchRouteDataTask extends AsyncTask<String, Void, String> {
 
-    	// データ登録の実タスク
+    	// 問い合わせの実処理
 		@Override
 		protected String doInBackground(String... urls) {
 			if(urls.length > 0){
@@ -174,17 +172,15 @@ public class RouteMapActivity extends MapActivity {
 					response = client.execute( request );
 					int status = response.getStatusLine().getStatusCode();
 					String phrase = response.getStatusLine().getReasonPhrase();
-					Log.d("Traveler", "[response] " + status + " " + phrase);
+					Log.d(LOG_TAG, "[response] " + status + " " + phrase);
 					
 					if(status == HttpStatus.SC_OK){
 						OutputStream outStream = new ByteArrayOutputStream(); 
 						response.getEntity().writeTo(outStream);
 						String json = outStream.toString();
-						Log.d("Traveler", "JSON: " + json);
+						Log.d(LOG_TAG, "JSON: " + json);
 						
-//						return TripRoute.ParseJSON(json);
 						return json;
-						
 					}	
 										
 					return null;
@@ -198,25 +194,26 @@ public class RouteMapActivity extends MapActivity {
 			return null;
 		}
 
-		// データ登録リクエスト送信後、ルート情報を解析する。
+		// API問い合わせ後、受信レスポンスを解析する。
 		@Override
 		protected void onPostExecute(String result) {
 			
-			Log.v("Traveler","Successfully Fetched.");
-			
-			Log.d(LOG_TAG, result);
+			Log.v(LOG_TAG, "Successfully Fetched.");
 			
 			try {
 				mRoute = RouteModel.ParseJSON(result);
 				
+				//TODO: ルート情報の永続化
+				
 				// ルート表示のオーバーレイを生成
-				routeOverlay = new RouteOverlay();
-				mMap.getOverlays().add(routeOverlay);
+				mRouteOverlay.setRoute(mRoute);
 		
 				// マップの表示更新
 				mMap.invalidate();
 				
-				Toast.makeText(mContext, "Route Fetched.", Toast.LENGTH_LONG).show();
+				
+				// 受信完了のメッセージを表示
+				Toast.makeText(mContext, "Route Fetched.", Toast.LENGTH_LONG).show();				
 				
 			} catch (JSONException e) {
 				// TODO 自動生成された catch ブロック
@@ -227,14 +224,18 @@ public class RouteMapActivity extends MapActivity {
     	
     }
 
+    /**
+     * @brief 現在地情報(mCurPoint)を定期的に更新する。
+     *
+     */
     class TrackingMyLocationOverlay extends MyLocationOverlay
     {
-        MapView mapView;
+        MapView mMapView;
         
         public TrackingMyLocationOverlay(Context context, MapView mapView)
         {
             super(context, mapView);
-            this.mapView = mapView;
+            mMapView = mapView;
         }
 
         @Override
@@ -248,40 +249,48 @@ public class RouteMapActivity extends MapActivity {
         }
     }
     
+    /**
+     * @brief 十字ガイドライン
+     * @note 交点がMapViewの中心点となるように。
+     */
     class CrossOverlay extends Overlay {
+    	private Paint mPaint;
+    	
+    	public CrossOverlay(){
+            mPaint = new Paint( Paint.ANTI_ALIAS_FLAG);
+            mPaint.setStyle( Paint.Style.STROKE);
+            mPaint.setAntiAlias( true);
+            mPaint.setStrokeWidth( 3);
+            mPaint.setColor( Color.RED);
+    	}    	
 
         @Override
         public void draw(Canvas canvas, MapView mapView, boolean shadow) {
             super.draw(canvas, mapView, shadow);
-    		
-            if( !shadow ) {
-                Paint paint = new Paint( Paint.ANTI_ALIAS_FLAG);
-                paint.setStyle( Paint.Style.STROKE);
-                paint.setAntiAlias( true);
-                paint.setStrokeWidth( 3);
-                paint.setColor( Color.RED);
 
-                Path path = new Path();
-                int height = canvas.getHeight();
-                int width = canvas.getWidth();
-                path.moveTo( width / 2, 0);
-                path.lineTo( width / 2, height);
-                canvas.drawPath(path, paint);
-                path.moveTo( 0, height / 2);
-                path.lineTo( width , height / 2);
-                canvas.drawPath(path, paint);
-            }
+            Path path = new Path();
+            int height = mapView.getHeight();
+            int width = mapView.getWidth();
+            path.moveTo( width / 2, 0);
+            path.lineTo( width / 2, height);
+            canvas.drawPath(path, mPaint);
+            path.moveTo( 0, height / 2);
+            path.lineTo( width , height / 2);
+            canvas.drawPath(path, mPaint);
         }
     }
     
+    /**
+     * @brief ルート経路を地図上に表示するオーバーレイ
+     */
 	class RouteOverlay extends Overlay{
 
-		private RouteModel.Step steps[] = null;
+		private RouteModel.Step mSteps[] = null;
 		private Paint mPaint = null;
 		
 		public RouteOverlay() {
 			super();
-			steps = mRoute.steps;
+			mSteps = new RouteModel.Step[0];
 			
 	        mPaint = new Paint();
 	        mPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -292,6 +301,10 @@ public class RouteMapActivity extends MapActivity {
 	        mPaint.setAlpha(127);
 	        mPaint.setAntiAlias(true);
 		}
+		
+		public void setRoute(RouteModel route){
+			mSteps = route.steps;
+		}
 
 		@Override
 		public void draw(Canvas canvas, MapView mapView, boolean shadow) {
@@ -301,15 +314,17 @@ public class RouteMapActivity extends MapActivity {
 	        Path path = new Path();
 	        Point pxPoint = new Point();
 	        
-        	projection.toPixels(steps[0].start_addr, pxPoint);
-        	path.moveTo((float)pxPoint.x, (float)pxPoint.y);
-	        
-	        for(int i = 0; i < steps.length; i++){
-	        	projection.toPixels(steps[i].end_addr, pxPoint);
-	        	path.lineTo((float)pxPoint.x, (float)pxPoint.y);	        	
-	        	
-	        }
-	        canvas.drawPath(path, mPaint);
+	        if(mSteps.length > 0){
+	        	projection.toPixels(mSteps[0].start_addr, pxPoint); // GeoPoint -> Px座標
+	        	path.moveTo((float)pxPoint.x, (float)pxPoint.y);
+		        
+		        for(int i = 0; i < mSteps.length; i++){
+		        	projection.toPixels(mSteps[i].end_addr, pxPoint);
+		        	path.lineTo((float)pxPoint.x, (float)pxPoint.y);	        	
+		        	
+		        }
+		        canvas.drawPath(path, mPaint);
+		    }
 		}
 
 	}

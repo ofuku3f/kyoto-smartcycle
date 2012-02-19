@@ -16,6 +16,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.AttributeSet;
@@ -42,7 +43,7 @@ public class RouteMapActivity extends MapActivity {
 	private MapController mMapCtrl = null;
 	
 //	private CurrentLocationOverlay currentLocationOverlay;
-	private MyLocationOverlay mMyLocOverlay = null;
+	private TrackingMyLocationOverlay mMyLocOverlay = null;
 	//private RouteOverlay routeOverlay = null;
 	
 	private Context mContext = null;
@@ -78,7 +79,7 @@ public class RouteMapActivity extends MapActivity {
 		mMapCtrl.setZoom(15);
 		
 		// 現在地表示のオーバーレイを生成
-		mMyLocOverlay = new MyLocationOverlay(this, mMap);
+		mMyLocOverlay = new TrackingMyLocationOverlay(this, mMap);
 		mMyLocOverlay.runOnFirstFix(new Runnable() {
 			
 			@Override
@@ -89,6 +90,7 @@ public class RouteMapActivity extends MapActivity {
 				Log.d(LOG_TAG, "Fix Current Location: " + startingPoint.getLatitudeE6() + "," + startingPoint.getLongitudeE6());
 			}
 		});
+		
 		mMap.getOverlays().add(mMyLocOverlay);
 		
 
@@ -210,9 +212,13 @@ public class RouteMapActivity extends MapActivity {
 			
 			Log.d(LOG_TAG, result);
 			
-			//mRoute = TripRoute.GetDebugRoute();
+			try {
+				mRoute = RouteModel.ParseJSON(result);
+			} catch (JSONException e) {
+				// TODO 自動生成された catch ブロック
+				e.printStackTrace();
+			}
 			
-//			mRoute = result;
 //			
 //			// ルート表示のオーバーレイを生成
 //			routeOverlay = new RouteOverlay(mRoute);
@@ -231,8 +237,27 @@ public class RouteMapActivity extends MapActivity {
     	
     }
 
-	
+    class TrackingMyLocationOverlay extends MyLocationOverlay
+    {
+        MapView mapView;
+        
+        public TrackingMyLocationOverlay(Context context, MapView mapView)
+        {
+            super(context, mapView);
+            this.mapView = mapView;
+        }
 
-	
-
+        @Override
+        public void onLocationChanged(Location location)
+        {
+            super.onLocationChanged(location);
+            mCurPoint = new GeoPoint(
+                    (int) (location.getLatitude() * 1E6), 
+                    (int) (location.getLongitude() * 1E6));
+            Log.d(LOG_TAG, "location modified: " + mCurPoint.getLatitudeE6() + "," + mCurPoint.getLongitudeE6());
+        }
+    }
+    
 }
+
+

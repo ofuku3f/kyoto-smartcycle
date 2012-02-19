@@ -22,13 +22,5 @@
         android:text="@string/extension_info"
         android:textColor="@color/smart_watch_text_color_grey"
         android:textSize="12px" />
-
-    <Button
-        android:id="@+id/button1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignRight="@+id/aefTextView1"
-        android:text="Button" />
-
+        
 </RelativeLayout>

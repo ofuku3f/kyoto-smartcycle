@@ -26,13 +26,13 @@ public class RouteModel {
 			JSONArray steps = legslist.getJSONObject(i).getJSONArray("steps");
 			for(int j = 0; j < steps.length(); j++){
 				Step s = route.new Step();
-				JSONObject step = steps.getJSONObject(i);
+				JSONObject step = steps.getJSONObject(j);
 				s.distance = step.getJSONObject("distance").getInt("value");
 				s.duration = step.getJSONObject("duration").getInt("value");
 				JSONObject st = step.getJSONObject("start_location");
-				s.start_addr = new GeoPoint((int)(st.getDouble("lat") * 1E6), (int)(st.getDouble("lng")));
+				s.start_addr = new GeoPoint((int)(st.getDouble("lat") * 1E6), (int)(st.getDouble("lng") * 1E6));
 				JSONObject en = step.getJSONObject("end_location");
-				s.end_addr = new GeoPoint((int)(en.getDouble("lat") * 1E6), (int)(en.getDouble("lng")));
+				s.end_addr = new GeoPoint((int)(en.getDouble("lat") * 1E6), (int)(en.getDouble("lng") * 1E6));
 				s.instruction = step.getString("html_instructions");
 				localSteps.add(s);
 			}

@@ -31,20 +31,21 @@
 
 package com.kyoto.smartcycle;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+
+import com.google.android.maps.GeoPoint;
 import com.sonyericsson.extras.liveware.aef.widget.Widget;
 import com.sonyericsson.extras.liveware.extension.util.SmartWatchConst;
+import com.sonyericsson.extras.liveware.extension.util.widget.SmartWatchWidgetImage;
 import com.sonyericsson.extras.liveware.extension.util.widget.WidgetExtension;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
-import android.preference.PreferenceManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.text.format.DateUtils;
 import android.util.Log;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 /**
  * The sample widget handles the widget on an accessory. This class exists in
@@ -58,12 +59,17 @@ class SampleWidget extends WidgetExtension {
 
     private static final long UPDATE_INTERVAL = 10 * DateUtils.SECOND_IN_MILLIS;
 
-    private static final SimpleDateFormat TIME_FORMAT_24_H = new SimpleDateFormat("HH:mm",
-            new Locale("se"));
-
-    private static final SimpleDateFormat TIME_FORMAT_AM_PM = new SimpleDateFormat("hh:mm a",
-            new Locale("se"));
-
+    // 画面切り替えカウント
+    private int viewCount = 0;
+    
+    // 画面の総数
+    private static int SUM_VIEW = 3;
+    
+/*    RouteMapActivity routeMap;
+    RouteModel.Step[] stepList;
+    GeoPoint geoPoint;
+    RouteModel routeModel;*/
+    
     /**
      * Create sample widget.
      *
@@ -72,6 +78,10 @@ class SampleWidget extends WidgetExtension {
      */
     SampleWidget(final String hostAppPackageName, final Context context) {
         super(context, hostAppPackageName);
+/*        routeMap = new RouteMapActivity();
+        routeModel = routeMap.getRoute();
+        stepList = routeModel.steps;
+        geoPoint = routeMap.getCurPoint();*/
     }
 
     /**
@@ -100,6 +110,12 @@ class SampleWidget extends WidgetExtension {
     @Override
     public void onScheduledRefresh() {
         Log.d(SampleExtensionService.LOG_TAG, "scheduledRefresh()");
+        
+        // 情報を定期更新
+/*        routeModel = routeMap.getRoute();
+        stepList = routeModel.steps;
+        geoPoint = routeMap.getCurPoint();*/
+        
         updateWidget();
     }
 
@@ -129,32 +145,16 @@ class SampleWidget extends WidgetExtension {
         }
 
         if (type == Widget.Intents.EVENT_TYPE_SHORT_TAP) {
-            // Change clock mode on short tap.
-            setClockMode24h(!isClockMode24h());
-            // Update clock widget now
+        	// 画面切り替えカウントをインクリメントする
+        	viewCount++;
+        	// カウントが画面総数を超えた場合はリセットする
+        	if(viewCount >= SUM_VIEW){
+        		viewCount = 0;
+        	}
+        	
+            // タッチされたら画面を更新する
             updateWidget();
         }
-    }
-
-    /**
-     * Set clock format
-     *
-     * @return True if 24-h clock format, false to use 12-h am/pm
-     */
-    private boolean isClockMode24h() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        return prefs.getBoolean(mContext.getString(R.string.preference_key_clock_mode), true);
-    }
-
-    /**
-     * Get clock format
-     *
-     * @param isClockMode24h True if 24-h clock format, false to use 12-h am/pm
-     */
-    private void setClockMode24h(boolean isClockMode24h) {
-        Editor editor = PreferenceManager.getDefaultSharedPreferences(mContext).edit();
-        editor.putBoolean(mContext.getString(R.string.preference_key_clock_mode), isClockMode24h);
-        editor.commit();
     }
 
     /**
@@ -162,14 +162,76 @@ class SampleWidget extends WidgetExtension {
      */
     private void updateWidget() {
         Log.d(SampleExtensionService.LOG_TAG, "updateWidget");
-        // Get time
-        String time = null;
-        if (isClockMode24h()) {
-            time = TIME_FORMAT_24_H.format(new Date());
-        } else {
-            time = TIME_FORMAT_AM_PM.format(new Date());
+        
+        SmartWatchWidgetImage instance;
+    	Model model = new Model();
+    	
+        switch(viewCount)
+        {
+        	case 0:
+        	default:
+        		model.x = "右150m";
+        		instance = new SmartWatchSampleWidgetImageNokori(mContext, model);
+        		break;
+        	case 1:
+        		model.y = "2000m";
+        		instance = new SmartWatchSampleWidgetImageFinalGoal(mContext, model);
+        		break;
+        	case 2:
+        		int latitude = -32;//geoPoint.getLatitudeE6();
+        		int longitude = 132;//geoPoint.getLongitudeE6();
+        		String locationInfo = "";
+            	try{
+            		// 座標を住所に変換する
+            		locationInfo = ConvertAddress(latitude,longitude,mContext);
+            	}
+            	catch(IOException ex){
+        			// エラーログ出力
+        			Log.e("err",ex.toString());
+        		}
+            	model.z = "京都市";//locationInfo;
+        		instance = new SmartWatchSampleWidgetImageNow(mContext, model);
+        		break;
         }
-
-        showBitmap(new SmartWatchSampleWidgetImage(mContext, time).getBitmap());
+        showBitmap(instance.getBitmap());
     }
+    
+	/**
+	 * 座標を住所に変換する。
+	 * 
+	 * @param latitude
+	 * @param longitude
+	 * @param context
+	 * @return
+	 * @throws IOException
+	 */
+	private String ConvertAddress(int latitude, int longitude, Context context) throws IOException{
+		// 戻り値用結果
+		String result = new String();
+
+		//　geocoedrの実体化
+		Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+		// 住所情報を取得(最大5項目)
+		List<Address> addressList = geocoder.getFromLocation(latitude, longitude, 5);
+
+		// 空でない場合
+		if (!addressList.isEmpty()){
+			// 住所情報
+			Address address = addressList.get(0);
+			StringBuffer strbuf = new StringBuffer();
+
+			//　住所情報をつなげていく
+			String buf;
+/*			for (int i = 0; i <= address.getMaxAddressLineIndex(); i++){
+				buf = address.getAddressLine(i);
+				strbuf.append(buf+"　");
+			}*/
+			buf = address.getAddressLine(1);
+			strbuf.append(buf+"　");
+
+			result = strbuf.toString();
+		}
+		
+		return result;
+	}
 }

@@ -47,8 +47,18 @@ public class RouteMapActivity extends MapActivity {
 	
 	private Context mContext = null;
 	
-	private GeoPoint curPoint = null;
+	private GeoPoint startingPoint = null;
 	
+	private RouteModel mRoute = null;
+	public RouteModel getRoute() {
+		return mRoute;
+	}
+
+	private GeoPoint mCurPoint = null;
+	public GeoPoint getCurPoint(){
+		return mCurPoint;
+	}
+
 	private static final String LOG_TAG = "RouteMapActivity";
 	private static final String ROUTE_URL = "http://maps.googleapis.com/maps/api/directions/json?origin=%s&destination=%s&sensor=false"; 
 	private static final int MENU_ID_SET_DESTINATION = (Menu.FIRST + 1); 
@@ -75,8 +85,8 @@ public class RouteMapActivity extends MapActivity {
 			public void run() {
 				
 				mMapCtrl.animateTo(mMyLocOverlay.getMyLocation());
-				curPoint = mMyLocOverlay.getMyLocation();
-				Log.d(LOG_TAG, "Fix Current Location: " + curPoint.getLatitudeE6() + "," + curPoint.getLongitudeE6());
+				startingPoint = mMyLocOverlay.getMyLocation();
+				Log.d(LOG_TAG, "Fix Current Location: " + startingPoint.getLatitudeE6() + "," + startingPoint.getLongitudeE6());
 			}
 		});
 		mMap.getOverlays().add(mMyLocOverlay);
@@ -141,7 +151,7 @@ public class RouteMapActivity extends MapActivity {
     			// リクエストを非同期で実行する。
     			FetchRouteDataTask task = new FetchRouteDataTask();
     			task.execute(String.format(ROUTE_URL, 
-    					String.format("%f,%f", curPoint.getLatitudeE6() * 0.000001, curPoint.getLongitudeE6() * 0.000001),
+    					String.format("%f,%f", startingPoint.getLatitudeE6() * 0.000001, startingPoint.getLongitudeE6() * 0.000001),
     					String.format("%f,%f", dest.getLatitudeE6() * 0.000001, dest.getLongitudeE6() * 0.000001))
     					);
 				

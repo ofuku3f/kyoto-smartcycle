@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="@dimen/smart_watch_widget_width_inner"
+    android:layout_height="@dimen/smart_watch_widget_height_inner" >
+
+    <com.sonyericsson.extras.liveware.extension.util.AefTextView
+        android:id="@+id/smart_watch_sample_widget_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:textColor="@color/smart_watch_text_color_orange"
+        android:textSize="20px"
+        android:textStyle="bold" />
+
+    <com.sonyericsson.extras.liveware.extension.util.AefTextView
+        android:id="@+id/aefTextView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="3px"
+        android:text="@string/extension_info"
+        android:textColor="@color/smart_watch_text_color_grey"
+        android:textSize="12px" />
+
+    <Button
+        android:id="@+id/button1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignRight="@+id/aefTextView1"
+        android:text="Button" />
+
+</RelativeLayout>

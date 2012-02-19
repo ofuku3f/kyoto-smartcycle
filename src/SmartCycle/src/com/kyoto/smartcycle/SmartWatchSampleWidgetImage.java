@@ -44,6 +44,7 @@ import android.widget.TextView;
 public class SmartWatchSampleWidgetImage extends SmartWatchWidgetImage {
 
     private String mTime;
+    private Model mModel;
 
     /**
      * Create sample widget image.
@@ -53,14 +54,20 @@ public class SmartWatchSampleWidgetImage extends SmartWatchWidgetImage {
      */
     public SmartWatchSampleWidgetImage(final Context context, final String time) {
         super(context);
-        setInnerLayoutResourceId(R.layout.smart_watch_sample_widget);
+        setInnerLayoutResourceId(R.layout.smart_watch_arrow);
         mTime = time;
     }
 
+    public SmartWatchSampleWidgetImage(final Context context, Model model) {
+    	super(context);
+    	setInnerLayoutResourceId(R.layout.smart_watch_arrow);
+    	mModel = model;
+    	
+    }
     @Override
     protected void applyInnerLayout(LinearLayout innerLayout) {
         // Set time
-        ((TextView)innerLayout.findViewById(R.id.smart_watch_sample_widget_time)).setText(mTime);
+        ((TextView)innerLayout.findViewById(R.id.smart_watch_arrow_arrow)).setText(String.valueOf(mModel.x));
     }
 
 }

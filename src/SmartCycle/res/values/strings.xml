@@ -15,4 +15,5 @@
     <string name="preference_key_clock_mode">preference_key_clock_mode</string>
     <string name="route_map_activity_name">Smart Cycling</string>
     <string name="MENU_SET_DESTINATION">Set Destination</string>
+    <string name="nokori">残り</string>
 </resources>
